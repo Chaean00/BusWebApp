@@ -1,13 +1,19 @@
 from flask import Flask, render_template, request
 import requests
+from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
+scheduler = BackgroundScheduler()
 _id = ''
 _pw = ''
 _upTime = ''
 _downTime = ''
 _upSeat = ''
 _downSeat = ''
+upReserveText = ''
+downReserveText = ''
+
 
 @app.route('/')
 def index():
@@ -26,14 +32,17 @@ def submit():
         _option = request.form.get('option')
 
         if _option == 'a':
-            # run()
-            return "a"
+            run()
+            if "OK" in upReserveText:
+                return render_template('general.html')
+            else:
+                return render_template('fail.html')
         elif _option == 'b' :
+            schedule_job()
             return "b"
         else:
-            return "신청 방법을 선택해주세요"
+            return render_template('fail.html')
 
-        return f'{_id}, {_pw}, {_upTime}, {_downTime}, {_upSeat}, {_downSeat}, {_option}'
     else :
         return render_template('index.html')
 
@@ -62,8 +71,6 @@ def run():
         print("로그인 성공")
         print("응답코드 = " + str(response.status_code))
         cookie = response.cookies.get_dict()
-        print(cookie)
-        print(type(cookie))
 
         # 로그인후 Authorization을 가져오기
         # {'result': 'OK', 'resultMsg': '', 'data': 'QedXyA83JFEG8nl8zeoM3mD693G7wbSFxu3lAgFeziWjPnRXcx+X5hECB2QZo3CB85wNBVHVcgOiU6W15FWH6g=='}
@@ -140,19 +147,25 @@ def run():
         print("ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ")
         print("result 값이 OK면 성공")
         try:
-            print("등교 내역 = " + str(busUpReserve.json()))
+            upReserveText = str(busUpReserve.json())
+            print("등교 내역 = " + upReserveText)
         except NameError:
             pass
         try:
-            print("하교 내역 = " + str(busDownReserve.json()))
+            downReserveText = str(busDownReserve.json())
+            print("하교 내역 = " + downReserveText)
         except NameError:
             pass
     else:
         print("로그인 실패")
         print(response.text)
+def schedule_job():
+    job_date = datetime.today().replace(hour=22, minute=0, second=1)
+    if job_date < datetime.now():  # 오늘 22시 1초가 이미 지났다면 내일 22시 1초로 설정
+        job_date += timedelta(days=1)
 
-
-
+    if scheduler.get_job('my_job') is None:
+        scheduler.add_job(run, 'date', run_date=job_date, id='my_job')
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

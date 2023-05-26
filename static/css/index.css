@@ -1,6 +1,50 @@
 .submit_btn {
-    position: fixed;
+    /*position: fixed;*/
     bottom: 0;
-    width: 100%;
+    width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
 }
 
+.top_div {
+    margin: 30px;
+}
+
+.input_div {
+    width: 300px;
+    margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.radio_div {
+    width: 100px;
+    margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.time_div {
+    margin-left: auto;
+    margin-right: auto;
+    width: 300px;
+}
+
+.logo_img {
+    display: block;
+    margin-top: 15px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%; /* 이미지가 너무 크지 않도록 설정 */
+    width: 200px;
+    height: 200px;
+}
+
+#_id, #_pw, #_upTime, #_downTime, #_upSeat, #_downSeat{
+    width: 300px;
+}
+
+.spacing {
+    letter-spacing: 0.3rem;
+}
