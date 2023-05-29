@@ -6,12 +6,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 scheduler = BackgroundScheduler(timezone='Asia/Seoul')
-_id = ''
-_pw = ''
-_upTime = ''
-_downTime = ''
-_upSeat = ''
-_downSeat = ''
 upReserveText = ''
 downReserveText = ''
 resultMsg = ''
@@ -27,7 +21,6 @@ def fail():
 @app.route('/submit', methods=['POST'])
 def submit():
     if request.method == 'POST' :
-        global _id, _pw, _upTime, _downTime, _upSeat, _downSeat
         _id = request.form.get('_id')
         _pw = request.form.get('_pw')
         _upTime = request.form.get('_upTime')
@@ -36,7 +29,6 @@ def submit():
         _downSeat = request.form.get('_downSeat')
         _option = request.form.get('option')
         response = {'message' : ''}
-
         # 일반 신청
         if _option == 'a':
             if _upTime != '':
@@ -44,7 +36,7 @@ def submit():
                     response['message'] = '등교 좌석이 입력되어있지 않습니다.'
                     return jsonify(response)
                 else :
-                    if (int(_upSeat) < 1) or (int(_upSeat) > 40):
+                    if (int(_upSeat) < 1) or (int(_upSeat) > 44):
                         response['message'] = '존재하지않는 좌석 번호 입니다.'
                         return jsonify(response)
             if _downTime != '':
@@ -52,7 +44,7 @@ def submit():
                     response['message'] = '하교 좌석이 입력되어있지 않습니다.'
                     return jsonify(response)
                 else :
-                    if (int(_downSeat) < 1) or (int(_downSeat) > 40):
+                    if (int(_downSeat) < 1) or (int(_downSeat) > 44):
                         response['message'] = '존재하지않는 좌석 번호 입니다.'
                         return jsonify(response)
             if _upSeat != '':
@@ -64,7 +56,7 @@ def submit():
                     response['message'] = "하교 시간이 입력되어있지 않습니다."
                     return jsonify(response)
 
-            run()
+            run(_id=_id, _pw=_pw, _upTime=_upTime, _downTime=_downTime, _upSeat=_upSeat, _downSeat=_downSeat)
             if ("OK" == upReserveText) or ("OK" == downReserveText):
                 response['message'] = '정상적으로 처리되었습니다.'
                 return jsonify(response)
@@ -92,7 +84,7 @@ def submit():
                 if _downTime == '':
                     response['message'] = "하교 시간이 입력되어있지 않습니다."
                     return jsonify(response)
-            schedule_job()
+            schedule_job(_id=_id, _pw=_pw, _upTime=_upTime, _downTime=_downTime, _upSeat=_upSeat, _downSeat=_downSeat)
             response['message'] = '예약을 완료했습니다.'
             return jsonify(response)
 
@@ -105,7 +97,7 @@ def submit():
     else :
         return render_template('index.html')
 
-def run():
+def run(_id, _pw, _upTime, _downTime, _upSeat, _downSeat):
     # 로그인 데이터
     loginData = {
         "id": _id,
@@ -127,6 +119,7 @@ def run():
     session = requests.Session()
     response = session.post(loginUrl, json=loginData)
     if "OK" in response.text:
+        global upReserveText, downReserveText, resultMsg
         print("로그인 성공")
         print("응답코드 = " + str(response.status_code))
         cookie = response.cookies.get_dict()
@@ -205,7 +198,6 @@ def run():
         print("ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ")
         print("result 값이 OK면 성공")
         try:
-            global upReserveText, resultMsg
             upReserveText = busUpReserve.json()['result']
             print("등교 내역 = " + str(busUpReserve.json()))
             if upReserveText == "FAIL":
@@ -213,7 +205,6 @@ def run():
         except NameError:
             pass
         try:
-            global downReserveText, resultMsg
             downReserveText = busDownReserve.json()['result']
             print("하교 내역 = " + str(busDownReserve.json()))
             if downReserveText == "FAIL":
@@ -224,20 +215,22 @@ def run():
     else:
         print("로그인 실패")
         print(response.text)
-def schedule_job():
-    print(scheduler.get_jobs())
+def schedule_job(_id, _pw, _upTime, _downTime, _upSeat, _downSeat):
+
     job_id = f'{_id}_bus_reserve'
-    job_date = datetime.today().replace(hour=00, minute=21, second=30)
+    job_date = datetime.today().replace(hour=1, minute=13, second=00)
 
     if job_date < datetime.now():  # 오늘 22시 1초가 이미 지났다면 내일 22시 1초로 설정
         job_date += timedelta(days=1)
 
-    if any([job.id == job_id for job in scheduler.get_jobs()]):
-        # 이미 등록된 작업 스케줄러가 있다면 삭제
-        scheduler.remove_job(job_id)
+    for job in scheduler.get_jobs():
+        if job.id == job_id:
+            scheduler.remove_job(job_id)
 
-    scheduler.add_job(run, 'date', run_date=job_date, id=job_id)
-    scheduler.start()
+    scheduler.add_job(run, 'date', run_date=job_date, id=job_id, args=[_id, _pw, _upTime, _downTime, _upSeat, _downSeat])
+    print(scheduler.get_jobs())
+    if not scheduler.running:
+        scheduler.start()
 
 if __name__ == '__main__':
     app.run(port=8080, debug=True)
