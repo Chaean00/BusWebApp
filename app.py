@@ -221,4 +221,4 @@ def schedule_job():
         scheduler.add_job(run, 'date', run_date=job_date, id='my_job')
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    app.run()
