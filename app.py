@@ -217,7 +217,7 @@ def run(_id, _pw, _upTime, _downTime, _upSeat, _downSeat):
 def schedule_job(_id, _pw, _upTime, _downTime, _upSeat, _downSeat):
 
     job_id = f'{_id}_bus_reserve'
-    job_date = datetime.today().replace(hour=1, minute=13, second=00)
+    job_date = datetime.today().replace(hour=22, minute=00, second=1)
 
     if job_date < datetime.now():  # 오늘 22시 1초가 이미 지났다면 내일 22시 1초로 설정
         job_date += timedelta(days=1)
@@ -232,4 +232,4 @@ def schedule_job(_id, _pw, _upTime, _downTime, _upSeat, _downSeat):
         scheduler.start()
 
 if __name__ == '__main__':
-    app.run(port=8080, debug=True)
+    app.run()
