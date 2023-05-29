@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify
 import requests
-import pytz
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
