@@ -44,7 +44,3 @@
 #_id, #_pw, #_upTime, #_downTime, #_upSeat, #_downSeat{
     width: 300px;
 }
-
-.spacing {
-    letter-spacing: 0.3rem;
-}

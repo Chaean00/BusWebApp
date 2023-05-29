@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,34 +14,87 @@ _downSeat = ''
 upReserveText = ''
 downReserveText = ''
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/fail')
+def fail():
+    return render_template('fail.html')
 
 @app.route('/submit', methods=['POST'])
 def submit():
     if request.method == 'POST' :
         global _id, _pw, _upTime, _downTime, _upSeat, _downSeat
-        _id = request.form['_id']
-        _pw = request.form['_pw']
-        _upTime = request.form['_upTime']
-        _downTime = request.form['_downTime']
-        _upSeat = request.form['_upSeat']
-        _downSeat = request.form['_downSeat']
+        _id = request.form.get('_id')
+        _pw = request.form.get('_pw')
+        _upTime = request.form.get('_upTime')
+        _downTime = request.form.get('_downTime')
+        _upSeat = request.form.get('_upSeat')
+        _downSeat = request.form.get('_downSeat')
         _option = request.form.get('option')
+        response = {'message' : ''}
 
+        print(_id, _pw, _upTime,_downTime, _upSeat, _downSeat,)
+
+        # 일반 신청
         if _option == 'a':
+            if _upTime != '':
+                if _upSeat == '':
+                    response['message'] = '등교 좌석이 입력되어있지 않습니다.'
+                    return jsonify(response)
+            if _downTime != '':
+                if _downSeat == '':
+                    response['message'] = '하교 좌석이 입력되어있지 않습니다.'
+                    return jsonify(response)
+
+            if _upSeat != '':
+                if _upTime == '':
+                    response['message'] = '등교 시간이 입력되어있지 않습니다'
+                    return jsonify(response)
+            if _downSeat !='':
+                if _downTime == '':
+                    response['message'] = "하교 시간이 입력되어있지 않습니다."
+                    return jsonify(response)
+
             run()
-            if "OK" in upReserveText:
-                return render_template('general.html')
+            if ("OK" in upReserveText) or ("OK" in downReserveText):
+                response['message'] = '정상적으로 처리되었습니다.'
+                return jsonify(response)
             else:
-                return render_template('fail.html')
+                response['message'] = '예약에 실패했습니다.'
+                return jsonify(response)
+
+        # 예약 신청
         elif _option == 'b' :
+            if _upTime != '':
+                if _upSeat == '':
+                    response['message'] = '등교 좌석이 입력되어있지 않습니다.'
+                    return jsonify(response)
+
+            if _downTime != '':
+                if _downSeat == '':
+                    response['message'] = '하교 좌석이 입력되어있지 않습니다.'
+                    return jsonify(response)
+
+            if _upSeat != '':
+                if _upTime == '':
+                    response['message'] = '등교 시간이 입력되어있지 않습니다'
+                    return jsonify(response)
+            if _downSeat !='':
+                if _downTime == '':
+                    response['message'] = "하교 시간이 입력되어있지 않습니다."
+                    return jsonify(response)
+
             schedule_job()
-            return "b"
+            response['message'] = '예약을 완료했습니다.'
+            return jsonify(response)
+
+        # 아무것도 안눌렀을 때
         else:
-            return render_template('fail.html')
+            response = {'message': '신청 버튼을 눌러주세요'}
+            return jsonify(response)
+
 
     else :
         return render_template('index.html')
@@ -84,7 +137,6 @@ def run():
             busDownResponse = session.get(busListDownUrl, cookies=cookie, headers=header)
             if busDownResponse.status_code == 200:
                 downData = busDownResponse.json()
-                print(downData)
                 for data in downData['data']['busList']:
                     # 하교 버스 시간 설정
                     if data['operateTime'] == _downTime:
@@ -156,6 +208,7 @@ def run():
             print("하교 내역 = " + downReserveText)
         except NameError:
             pass
+    # return
     else:
         print("로그인 실패")
         print(response.text)
