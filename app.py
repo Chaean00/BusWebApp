@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import requests
+import pytz
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone='Asia/Seoul')
 _id = ''
 _pw = ''
 _upTime = ''
@@ -35,19 +36,24 @@ def submit():
         _option = request.form.get('option')
         response = {'message' : ''}
 
-        print(_id, _pw, _upTime,_downTime, _upSeat, _downSeat,)
-
         # 일반 신청
         if _option == 'a':
             if _upTime != '':
                 if _upSeat == '':
                     response['message'] = '등교 좌석이 입력되어있지 않습니다.'
                     return jsonify(response)
+                else :
+                    if (int(_upSeat) < 1) or (int(_upSeat) > 40):
+                        response['message'] = '존재하지않는 좌석 번호 입니다.'
+                        return jsonify(response)
             if _downTime != '':
                 if _downSeat == '':
                     response['message'] = '하교 좌석이 입력되어있지 않습니다.'
                     return jsonify(response)
-
+                else :
+                    if (int(_downSeat) < 1) or (int(_downSeat) > 40):
+                        response['message'] = '존재하지않는 좌석 번호 입니다.'
+                        return jsonify(response)
             if _upSeat != '':
                 if _upTime == '':
                     response['message'] = '등교 시간이 입력되어있지 않습니다'
@@ -58,7 +64,7 @@ def submit():
                     return jsonify(response)
 
             run()
-            if ("OK" in upReserveText) or ("OK" in downReserveText):
+            if ("OK" == upReserveText) or ("OK" == downReserveText):
                 response['message'] = '정상적으로 처리되었습니다.'
                 return jsonify(response)
             else:
@@ -66,7 +72,7 @@ def submit():
                 return jsonify(response)
 
         # 예약 신청
-        elif _option == 'b' :
+        elif _option == 'b':
             if _upTime != '':
                 if _upSeat == '':
                     response['message'] = '등교 좌석이 입력되어있지 않습니다.'
@@ -199,13 +205,16 @@ def run():
         print("ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ")
         print("result 값이 OK면 성공")
         try:
-            upReserveText = str(busUpReserve.json())
+            global upReserveText
+            upReserveText = busUpReserve.json()['result']
             print("등교 내역 = " + upReserveText)
         except NameError:
             pass
         try:
-            downReserveText = str(busDownReserve.json())
+            global downReserveText
+            downReserveText = busDownReserve.json()['result']
             print("하교 내역 = " + downReserveText)
+            print(busDownReserve.json()['result'])
         except NameError:
             pass
     # return
@@ -213,12 +222,12 @@ def run():
         print("로그인 실패")
         print(response.text)
 def schedule_job():
-    job_date = datetime.today().replace(hour=22, minute=0, second=1)
+    job_date = datetime.today().replace(hour=23, minute=47, second=00)
     if job_date < datetime.now():  # 오늘 22시 1초가 이미 지났다면 내일 22시 1초로 설정
         job_date += timedelta(days=1)
 
-    if scheduler.get_job('my_job') is None:
-        scheduler.add_job(run, 'date', run_date=job_date, id='my_job')
+    scheduler.add_job(run, 'date', run_date=job_date, id=f'{_id}_bus_reserve')
+    scheduler.start()
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=8080, debug=True)
