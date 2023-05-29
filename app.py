@@ -14,6 +14,7 @@ _upSeat = ''
 _downSeat = ''
 upReserveText = ''
 downReserveText = ''
+resultMsg = ''
 
 @app.route('/')
 def index():
@@ -68,7 +69,7 @@ def submit():
                 response['message'] = '정상적으로 처리되었습니다.'
                 return jsonify(response)
             else:
-                response['message'] = '예약에 실패했습니다.'
+                response['message'] = resultMsg
                 return jsonify(response)
 
         # 예약 신청
@@ -91,7 +92,6 @@ def submit():
                 if _downTime == '':
                     response['message'] = "하교 시간이 입력되어있지 않습니다."
                     return jsonify(response)
-
             schedule_job()
             response['message'] = '예약을 완료했습니다.'
             return jsonify(response)
@@ -205,16 +205,19 @@ def run():
         print("ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ")
         print("result 값이 OK면 성공")
         try:
-            global upReserveText
+            global upReserveText, resultMsg
             upReserveText = busUpReserve.json()['result']
-            print("등교 내역 = " + upReserveText)
+            print("등교 내역 = " + str(busUpReserve.json()))
+            if upReserveText == "FAIL":
+                resultMsg = busUpReserve.json()['resultMsg']
         except NameError:
             pass
         try:
-            global downReserveText
+            global downReserveText, resultMsg
             downReserveText = busDownReserve.json()['result']
-            print("하교 내역 = " + downReserveText)
-            print(busDownReserve.json()['result'])
+            print("하교 내역 = " + str(busDownReserve.json()))
+            if downReserveText == "FAIL":
+                resultMsg = busUpReserve.json()['resultMsg']
         except NameError:
             pass
     # return
@@ -222,11 +225,18 @@ def run():
         print("로그인 실패")
         print(response.text)
 def schedule_job():
-    job_date = datetime.today().replace(hour=23, minute=47, second=00)
+    print(scheduler.get_jobs())
+    job_id = f'{_id}_bus_reserve'
+    job_date = datetime.today().replace(hour=00, minute=21, second=30)
+
     if job_date < datetime.now():  # 오늘 22시 1초가 이미 지났다면 내일 22시 1초로 설정
         job_date += timedelta(days=1)
 
-    scheduler.add_job(run, 'date', run_date=job_date, id=f'{_id}_bus_reserve')
+    if any([job.id == job_id for job in scheduler.get_jobs()]):
+        # 이미 등록된 작업 스케줄러가 있다면 삭제
+        scheduler.remove_job(job_id)
+
+    scheduler.add_job(run, 'date', run_date=job_date, id=job_id)
     scheduler.start()
 
 if __name__ == '__main__':
