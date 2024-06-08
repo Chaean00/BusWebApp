@@ -2,4 +2,4 @@ Bus Auto Reservation Application
 
 Nowom - Nowon Ver
 
-KimJungTaek.pythonanywhere.com
+www.버스를편하게.shop
